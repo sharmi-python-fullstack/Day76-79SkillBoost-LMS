@@ -1,0 +1,26 @@
+{% extends "lms/base.html" %}
+{% block title %}Quiz results | SkillBoost LMS{% endblock %}
+{% block content %}
+    <h1>Quiz results</h1>
+    <p>You scored <strong>{{ attempt.score }}%</strong> ({{ attempt.correct_answers }} of {{ attempt.total_questions }} correct).</p>
+    {% if attempt.score >= 80 %}
+        <p class="notice">Passing score! The course is now marked complete.</p>
+        <p><a class="button" href="{% url 'lms:course_detail' attempt.quiz.course.pk %}">View course and certificate</a></p>
+    {% else %}
+        <p>You need at least 80% to complete the course.</p>
+    {% endif %}
+    <h2>Answer review</h2>
+    {% for response in attempt.responses.all %}
+        <article class="card">
+            <h3>{{ response.question.question_text }}</h3>
+            <p>Your answer: {{ response.selected_answer.answer_text|default:"No answer selected" }}</p>
+            {% if response.is_correct %}
+                <p>Correct</p>
+            {% else %}
+                {% for answer in response.question.answers.all %}
+                    {% if answer.is_correct %}<p>Correct answer: {{ answer.answer_text }}</p>{% endif %}
+                {% endfor %}
+            {% endif %}
+        </article>
+    {% endfor %}
+{% endblock %}

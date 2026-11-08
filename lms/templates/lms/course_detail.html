@@ -1,0 +1,20 @@
+{% extends "lms/base.html" %}
+{% block title %}{{ course.title }} | SkillBoost LMS{% endblock %}
+{% block content %}
+    <h1>{{ course.title }}</h1>
+    <p>{{ course.description|linebreaks }}</p>
+    {% if completed %}
+        <p class="notice"><strong>Course Completed!</strong></p>
+        <a class="button" href="{% url 'lms:generate_certificate' course.pk user.pk %}">Download Certificate</a>
+    {% endif %}
+    <p><a class="button" href="{% url 'lms:video_lesson_upload' course.pk %}">Add video lesson</a></p>
+    <h2>Video lessons</h2>
+    {% for lesson in course.lessons.all %}
+        <article class="card">
+            <h3><a href="{% url 'lms:lesson_detail' lesson.pk %}">{{ lesson.title }}</a></h3>
+            <p>{{ lesson.description|truncatewords:30 }}</p>
+        </article>
+    {% empty %}
+        <p>No lessons have been added to this course.</p>
+    {% endfor %}
+{% endblock %}

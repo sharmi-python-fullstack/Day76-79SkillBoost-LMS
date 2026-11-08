@@ -1,0 +1,11 @@
+{% extends "lms/base.html" %}
+{% block title %}Add lesson | SkillBoost LMS{% endblock %}
+{% block content %}
+    <h1>Add a video lesson</h1>
+    <p>For course: <a href="{% url 'lms:course_detail' course.pk %}">{{ course.title }}</a></p>
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit">Save lesson</button>
+    </form>
+{% endblock %}

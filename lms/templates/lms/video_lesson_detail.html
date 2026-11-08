@@ -1,0 +1,22 @@
+{% extends "lms/base.html" %}
+{% block title %}{{ lesson.title }} | SkillBoost LMS{% endblock %}
+{% block content %}
+    <p><a href="{% url 'lms:course_detail' lesson.course.pk %}">{{ lesson.course.title }}</a></p>
+    <h1>{{ lesson.title }}</h1>
+    <p>{{ lesson.description|linebreaks }}</p>
+    <p><a class="button" href="{{ lesson.video_url }}" target="_blank" rel="noopener noreferrer">Watch video lesson</a></p>
+    {% if user.is_authenticated %}
+        <form method="post" action="{% url 'lms:generate_quiz' lesson.pk %}">
+            {% csrf_token %}
+            <button type="submit">Generate quiz with AI</button>
+        </form>
+    {% else %}
+        <p><a href="{% url 'login' %}?next={{ request.path|urlencode }}">Log in</a> to generate or take a quiz.</p>
+    {% endif %}
+    <h2>Quizzes</h2>
+    {% for quiz in lesson.quizzes.all %}
+        <p><a href="{% url 'lms:quiz_detail' quiz.pk %}">{{ quiz.title }}</a></p>
+    {% empty %}
+        <p>No quizzes yet.</p>
+    {% endfor %}
+{% endblock %}

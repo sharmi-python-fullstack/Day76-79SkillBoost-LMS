@@ -1,0 +1,15 @@
+{% extends "lms/base.html" %}
+{% block title %}Courses | SkillBoost LMS{% endblock %}
+{% block content %}
+    <h1>Courses</h1>
+    {% if courses %}
+        {% for course in courses %}
+            <article class="card">
+                <h2><a href="{% url 'lms:course_detail' course.pk %}">{{ course.title }}</a></h2>
+                <p>{{ course.description|truncatewords:35 }}</p>
+            </article>
+        {% endfor %}
+    {% else %}
+        <p>No courses yet. Create the first one to get started.</p>
+    {% endif %}
+{% endblock %}

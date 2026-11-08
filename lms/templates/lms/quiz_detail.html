@@ -1,0 +1,26 @@
+{% extends "lms/base.html" %}
+{% block title %}{{ quiz.title }} | SkillBoost LMS{% endblock %}
+{% block content %}
+    <h1>{{ quiz.title }}</h1>
+    {% if user.is_authenticated %}
+        <form method="post" action="{% url 'lms:quiz_submit' quiz.pk %}">
+            {% csrf_token %}
+            {% for question in quiz.questions.all %}
+                <fieldset class="card">
+                    <legend>{{ forloop.counter }}. {{ question.question_text }}</legend>
+                    {% for answer in question.answers.all %}
+                        <label style="font-weight: normal">
+                            <input type="radio" name="question_{{ question.pk }}" value="{{ answer.pk }}">
+                            {{ answer.answer_text }}
+                        </label>
+                    {% endfor %}
+                </fieldset>
+            {% empty %}
+                <p>This quiz has no questions.</p>
+            {% endfor %}
+            {% if quiz.questions.exists %}<button type="submit">Submit answers</button>{% endif %}
+        </form>
+    {% else %}
+        <p><a href="{% url 'login' %}?next={{ request.path|urlencode }}">Log in</a> to take this quiz.</p>
+    {% endif %}
+{% endblock %}
