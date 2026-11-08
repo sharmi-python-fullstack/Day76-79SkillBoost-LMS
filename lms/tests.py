@@ -1,8 +1,12 @@
+import os
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
+from django.core.management import call_command
 from django.test import TestCase, override_settings
 from django.urls import reverse
+
+from io import StringIO
 
 from .ai import GeminiAPIError, generate_json
 from .forms import CourseForm, VideoLessonForm
@@ -33,6 +37,43 @@ class GeminiClientTests(TestCase):
         self.assertIn("HTTP 403", str(raised.exception))
         self.assertIn("API key is invalid.", str(raised.exception))
         self.assertNotIn("test-secret", str(raised.exception))
+
+
+class BootstrapAdminCommandTests(TestCase):
+    @patch.dict(
+        os.environ,
+        {
+            "DJANGO_SUPERUSER_USERNAME": "renderadmin",
+            "DJANGO_SUPERUSER_EMAIL": "admin@example.com",
+            "DJANGO_SUPERUSER_PASSWORD": "safe-test-password-123",
+        },
+    )
+    def test_creates_superuser_and_does_not_reset_existing_password(self):
+        output = StringIO()
+        call_command("bootstrap_admin", stdout=output)
+        admin = get_user_model().objects.get(username="renderadmin")
+        self.assertTrue(admin.is_superuser)
+        self.assertTrue(admin.check_password("safe-test-password-123"))
+        self.assertNotIn("safe-test-password-123", output.getvalue())
+
+        with patch.dict(os.environ, {"DJANGO_SUPERUSER_PASSWORD": "new-password-456"}):
+            call_command("bootstrap_admin", stdout=StringIO())
+        admin.refresh_from_db()
+        self.assertTrue(admin.check_password("safe-test-password-123"))
+
+    @patch.dict(
+        os.environ,
+        {
+            "DJANGO_SUPERUSER_USERNAME": "",
+            "DJANGO_SUPERUSER_EMAIL": "",
+            "DJANGO_SUPERUSER_PASSWORD": "",
+        },
+    )
+    def test_skips_when_no_admin_credentials_are_configured(self):
+        output = StringIO()
+        call_command("bootstrap_admin", stdout=output)
+        self.assertIn("skipped", output.getvalue())
+        self.assertFalse(get_user_model().objects.exists())
 
 
 class ModelAndFormTests(TestCase):

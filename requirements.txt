@@ -1,5 +1,8 @@
 Django>=6.1,<7.0
 python-dotenv>=1.0
+dj-database-url>=2.2
+psycopg[binary]>=3.2
+whitenoise>=6.8
 mysqlclient>=2.2
 requests>=2.32
 reportlab>=4.2
