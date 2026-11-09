@@ -301,7 +301,7 @@ def recommend_courses(request):
     )
     recommendations = []
     has_unmatched_recommendations = False
-    error = None
+    fallback_used = False
     try:
         generated = generate_json(prompt, google_search=True)
         for item in generated:
@@ -331,15 +331,49 @@ def recommend_courses(request):
             }
             recommendations.append(recommendation)
     except GeminiAPIError as exc:
-        error = str(exc)
         logger.warning("Course recommendations unavailable for user %s: %s", request.user.pk, exc)
+
+    if not recommendations:
+        fallback_used = True
+        completed_course_ids = {completion.course_id for completion in completions}
+        recent_scores = {}
+        for attempt in attempts:
+            recent_scores.setdefault(attempt.quiz.course_id, attempt.score)
+
+        fallback_courses = list(
+            Course.objects.exclude(pk__in=completed_course_ids).order_by("-created_at")
+        )
+        fallback_courses.sort(
+            key=lambda course: (
+                course.pk not in recent_scores,
+                recent_scores.get(course.pk, 101),
+            )
+        )
+        for course in fallback_courses[:5]:
+            score = recent_scores.get(course.pk)
+            description = course.description
+            relevance_score = 0.55
+            if score is not None:
+                description = (
+                    f"Your recent quiz score was {score}%. Review this course to strengthen "
+                    f"your understanding. {description}"
+                )
+                relevance_score = round(0.6 + (100 - score) / 250, 2)
+            recommendations.append(
+                {
+                    "title": course.title,
+                    "description": description,
+                    "relevance_score": relevance_score,
+                    "course": course,
+                }
+            )
 
     return render(
         request,
         "lms/recommendations.html",
         {
             "recommendations": recommendations,
-            "error": error,
+            "fallback_used": fallback_used,
             "has_unmatched_recommendations": has_unmatched_recommendations,
         },
     )

@@ -19,7 +19,9 @@ Open `http://127.0.0.1:8000/` for the course catalog and `/admin/` for the Djang
 
 ## AI features
 
-Add your Gemini API key to the `GEMINI_API_KEY` line in your local `.env` file to enable quiz generation and recommendations. The settings load `.env` automatically, and `.env` is ignored by Git. Never put a real key in `.env.example` or commit it. The model name can be changed with `GEMINI_MODEL`. AI features return an explicit error when the key is missing or the API response cannot be used; ordinary course and quiz functionality does not require the API.
+Add your Gemini API key to the `GEMINI_API_KEY` line in your local `.env` file to enable quiz generation and recommendations. The settings load `.env` automatically, and `.env` is ignored by Git. Never put a real key in `.env.example` or commit it. The model name can be changed with `GEMINI_MODEL`. Quiz generation reports an explicit error if Gemini is unavailable; ordinary course functionality does not require the API.
+
+The Dashboard falls back to recommendations from the existing course catalog when Gemini is unavailable or its suggestions do not match catalog courses. It prioritizes courses with recent quiz attempts for review and omits courses the learner has completed, so the Dashboard remains useful without an available Gemini quota.
 
 ## Tests and deployment
 

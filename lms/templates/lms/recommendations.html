@@ -2,7 +2,9 @@
 {% block title %}Recommended for you | SkillBoost LMS{% endblock %}
 {% block content %}
     <h1>Recommended for You</h1>
-    {% if error %}<p class="notice">{{ error }}</p>{% endif %}
+    {% if fallback_used %}
+        <p class="notice">AI recommendations are temporarily unavailable. These suggestions are based on your course activity and the available course catalog.</p>
+    {% endif %}
     {% for recommendation in recommendations %}
         <article class="card">
             <h2><a href="{% url 'lms:course_detail' recommendation.course.pk %}">{{ recommendation.title }}</a></h2>
@@ -10,12 +12,10 @@
             <p>Relevance score: {{ recommendation.relevance_score|floatformat:2 }}</p>
         </article>
     {% empty %}
-        {% if not error %}
-            {% if has_unmatched_recommendations %}
-                <p>No AI recommendations matched courses currently available in the catalog.</p>
-            {% else %}
-                <p>No recommendations are available yet.</p>
-            {% endif %}
+        {% if has_unmatched_recommendations and not fallback_used %}
+            <p>No AI recommendations matched courses currently available in the catalog.</p>
+        {% else %}
+            <p>No courses are available to recommend yet.</p>
         {% endif %}
     {% endfor %}
 {% endblock %}

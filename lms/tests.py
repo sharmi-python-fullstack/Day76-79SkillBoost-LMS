@@ -137,6 +137,63 @@ class ModelAndFormTests(TestCase):
         self.assertFalse(QuizResponse.objects.exists())
         self.assertFalse(CourseCompletion.objects.exists())
 
+    def test_models_can_be_updated(self):
+        self.course.title = "Advanced Python"
+        self.course.save()
+        self.lesson.title = "Advanced variables"
+        self.lesson.save()
+        self.quiz.title = "Advanced basics"
+        self.quiz.save()
+        self.question.question_text = "What is a Python variable?"
+        self.question.save()
+        self.answer.answer_text = "A named value"
+        self.answer.save()
+        attempt = QuizAttempt.objects.create(
+            user=self.user,
+            quiz=self.quiz,
+            score=60,
+            correct_answers=3,
+            total_questions=5,
+        )
+        attempt.score = 80
+        attempt.save()
+        response = QuizResponse.objects.create(
+            attempt=attempt,
+            question=self.question,
+            selected_answer=self.answer,
+            is_correct=False,
+        )
+        response.is_correct = True
+        response.save()
+        completion = CourseCompletion.objects.create(
+            user=self.user,
+            course=self.course,
+            is_completed=False,
+        )
+        completion.is_completed = True
+        completion.save()
+
+        for instance in (
+            self.course,
+            self.lesson,
+            self.quiz,
+            self.question,
+            self.answer,
+            attempt,
+            response,
+            completion,
+        ):
+            instance.refresh_from_db()
+
+        self.assertEqual(self.course.title, "Advanced Python")
+        self.assertEqual(self.lesson.title, "Advanced variables")
+        self.assertEqual(self.quiz.title, "Advanced basics")
+        self.assertEqual(self.question.question_text, "What is a Python variable?")
+        self.assertEqual(self.answer.answer_text, "A named value")
+        self.assertEqual(attempt.score, 80)
+        self.assertTrue(response.is_correct)
+        self.assertTrue(completion.is_completed)
+
     def test_model_forms_accept_valid_values_and_reject_missing_required_values(self):
         self.assertTrue(
             CourseForm({"title": "Django", "description": "Web development"}).is_valid()
@@ -340,3 +397,15 @@ class LMSViewTests(TestCase):
         self.assertContains(response, reverse("lms:course_detail", args=[self.course.pk]))
         generate_json.assert_called_once()
         self.assertTrue(generate_json.call_args.kwargs["google_search"])
+
+    @patch("lms.views.generate_json", side_effect=GeminiAPIError("Gemini quota exceeded."))
+    def test_recommendations_fall_back_to_catalog_when_ai_is_unavailable(self, generate_json):
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("lms:recommend_courses"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.context["fallback_used"])
+        self.assertContains(response, "AI recommendations are temporarily unavailable.")
+        self.assertContains(response, self.course.title)
+        self.assertContains(response, reverse("lms:course_detail", args=[self.course.pk]))
