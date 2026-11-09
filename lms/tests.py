@@ -397,6 +397,28 @@ class LMSViewTests(TestCase):
         self.assertContains(response, reverse("lms:course_detail", args=[self.course.pk]))
         generate_json.assert_called_once()
         self.assertTrue(generate_json.call_args.kwargs["google_search"])
+        self.assertIn("Available course catalog", generate_json.call_args.args[0])
+        self.assertIn(self.course.title, generate_json.call_args.args[0])
+
+    @patch("lms.views.generate_json")
+    def test_recommendations_accept_case_and_whitespace_variations_in_course_title(
+        self, generate_json
+    ):
+        generate_json.return_value = [
+            {
+                "title": f"  {self.course.title.upper()}  ",
+                "description": "Recommended based on your quiz results.",
+                "relevance_score": 0.9,
+            }
+        ]
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("lms:recommend_courses"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.context["fallback_used"])
+        self.assertContains(response, "Recommended based on your quiz results.")
+        self.assertContains(response, reverse("lms:course_detail", args=[self.course.pk]))
 
     @patch("lms.views.generate_json", side_effect=GeminiAPIError("Gemini quota exceeded."))
     def test_recommendations_fall_back_to_catalog_when_ai_is_unavailable(self, generate_json):

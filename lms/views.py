@@ -291,12 +291,19 @@ def recommend_courses(request):
         {"course": attempt.quiz.course.title, "score": attempt.score}
         for attempt in attempts
     ]
+    catalog_courses = list(Course.objects.order_by("title"))
+    catalog = [
+        {"title": course.title, "description": course.description}
+        for course in catalog_courses
+    ]
     prompt = (
-        "Recommend up to 5 learning courses personalized to this learner. Use recent "
-        "course completion and quiz results, and provide brief useful descriptions. "
-        "Return only a JSON array with objects containing string `title`, string "
-        "`description`, and numeric `relevance_score` from 0 to 1. Do not include "
-        "markdown or commentary.\n"
+        "Recommend up to 5 courses from the available LMS catalog for this learner. "
+        "Choose only courses listed in the catalog and copy each selected course title "
+        "exactly; never invent or rename a course. Personalize the order and brief "
+        "recommendation description using completed course and quiz history. Return only "
+        "a JSON array with objects containing string `title`, string `description`, and "
+        "numeric `relevance_score` from 0 to 1. Do not include markdown or commentary.\n"
+        f"Available course catalog: {catalog}\n"
         f"Completed courses: {history}\nQuiz results: {quiz_history}"
     )
     recommendations = []
@@ -319,7 +326,15 @@ def recommend_courses(request):
                 or not 0 <= relevance <= 1
             ):
                 raise GeminiAPIError("A recommendation did not match the required format.")
-            matching_course = Course.objects.filter(title__iexact=title.strip()).first()
+            normalized_title = " ".join(title.split()).casefold()
+            matching_course = next(
+                (
+                    course
+                    for course in catalog_courses
+                    if " ".join(course.title.split()).casefold() == normalized_title
+                ),
+                None,
+            )
             if matching_course is None:
                 has_unmatched_recommendations = True
                 continue
