@@ -343,6 +343,9 @@ def recommend_courses(request):
         fallback_courses = list(
             Course.objects.exclude(pk__in=completed_course_ids).order_by("-created_at")
         )
+        all_courses_completed = not fallback_courses
+        if all_courses_completed:
+            fallback_courses = list(Course.objects.order_by("-created_at"))
         fallback_courses.sort(
             key=lambda course: (
                 course.pk not in recent_scores,
@@ -353,6 +356,11 @@ def recommend_courses(request):
             score = recent_scores.get(course.pk)
             description = course.description
             relevance_score = 0.55
+            if all_courses_completed:
+                description = (
+                    "You've completed this course. Revisit it to refresh your knowledge. "
+                    f"{description}"
+                )
             if score is not None:
                 description = (
                     f"Your recent quiz score was {score}%. Review this course to strengthen "

@@ -409,3 +409,19 @@ class LMSViewTests(TestCase):
         self.assertContains(response, "AI recommendations are temporarily unavailable.")
         self.assertContains(response, self.course.title)
         self.assertContains(response, reverse("lms:course_detail", args=[self.course.pk]))
+
+    @patch("lms.views.generate_json", side_effect=GeminiAPIError("Gemini quota exceeded."))
+    def test_recommendations_suggest_completed_courses_when_no_new_courses_exist(self, generate_json):
+        CourseCompletion.objects.create(
+            user=self.user,
+            course=self.course,
+            is_completed=True,
+        )
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("lms:recommend_courses"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, self.course.title)
+        self.assertContains(response, "You&#x27;ve completed this course.")
+        self.assertContains(response, reverse("lms:course_detail", args=[self.course.pk]))
